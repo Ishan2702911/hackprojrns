@@ -153,7 +153,127 @@ export default function Dashboard({ onAnalysisUpdate, view = "pulse", customRepo
         />
       ) : null}
 
-      {view === "pulse" || view === "conflicts" || view === "history" || view === "repositories" ? (
+      {/* ── Full-width Commit History (history view only) ── */}
+      {view === "history" && (() => {
+        // Tag classifier — reads conventional commit prefixes first, then falls back to keyword scan
+        const getCommitTag = (msg: string): { label: string; color: string; icon: string } => {
+          const m = msg.toLowerCase();
+          const first = m.split('\n')[0];
+          if (/^(feat|feature)(\(.+\))?[!:]/.test(first)) return { label: "Feature",   color: "text-primary-fixed bg-primary-container/15 border-primary-container/30",    icon: "star" };
+          if (/^(fix|bug|hotfix)(\(.+\))?[!:]/.test(first))   return { label: "Fix",       color: "text-error bg-error/10 border-error/30",                                    icon: "bug_report" };
+          if (/^(release|milestone|v\d+\.\d)/.test(first))    return { label: "Milestone", color: "text-secondary-fixed bg-secondary-container/20 border-secondary/30",        icon: "flag" };
+          if (/^(refactor|perf|optim)(\(.+\))?[!:]/.test(first)) return { label: "Perf",   color: "text-tertiary bg-tertiary/10 border-tertiary/30",                           icon: "speed" };
+          if (/^(docs?|documentation)(\(.+\))?[!:]/.test(first))  return { label: "Docs",  color: "text-on-surface-variant bg-surface-container border-outline-variant/30",    icon: "description" };
+          if (/^(test|spec)(\(.+\))?[!:]/.test(first))         return { label: "Test",     color: "text-secondary bg-secondary/10 border-secondary/30",                        icon: "science" };
+          if (/^(style|css|ui)(\(.+\))?[!:]/.test(first))     return { label: "Style",    color: "text-pink-400 bg-pink-400/10 border-pink-400/30",                           icon: "palette" };
+          if (/^(chore|build|ci|cd|config)(\(.+\))?[!:]/.test(first)) return { label: "Chore", color: "text-on-surface-variant/60 bg-surface-container border-outline-variant/20", icon: "settings" };
+          // Keyword fallback for non-conventional commits
+          if (/\b(add|added|new|implement|create|feature)\b/.test(m)) return { label: "Feature",   color: "text-primary-fixed bg-primary-container/15 border-primary-container/30",    icon: "star" };
+          if (/\b(fix|fixed|bug|patch|resolve|repair|correc)\b/.test(m)) return { label: "Fix",    color: "text-error bg-error/10 border-error/30",                                    icon: "bug_report" };
+          if (/\b(release|v\d+\.\d+|milestone|launch|deploy)\b/.test(m)) return { label: "Milestone", color: "text-secondary-fixed bg-secondary-container/20 border-secondary/30",    icon: "flag" };
+          return { label: "Chore", color: "text-on-surface-variant/60 bg-surface-container border-outline-variant/20", icon: "settings" };
+        };
+
+        return (
+          <div className="w-full">
+            {/* Header bar */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-secondary-fixed">history</span>
+                <h3 className="font-headline font-bold text-sm uppercase tracking-widest">Commit History</h3>
+                <span className="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant text-[10px] font-bold border border-outline-variant/20">
+                  {analysis?.commits?.length || 0} commits
+                </span>
+              </div>
+              <a
+                href={`https://github.com/${selectedRepo?.owner?.login}/${selectedRepo?.name}/commits`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-primary-fixed hover:underline"
+              >
+                View on GitHub <span className="material-symbols-outlined text-sm">open_in_new</span>
+              </a>
+            </div>
+
+            {/* Commit timeline */}
+            <div className="relative">
+              {/* Vertical connector line */}
+              <div className="absolute left-[19px] top-0 bottom-0 w-px bg-outline-variant/20" />
+
+              <div className="space-y-1">
+                {analysis?.commits?.length > 0 ? analysis.commits.map((c: any, i: number) => {
+                  const tag = getCommitTag(c.commit.message);
+                  return (
+                    <a
+                      key={i}
+                      href={`https://github.com/${selectedRepo?.owner?.login}/${selectedRepo?.name}/commit/${c.sha}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex gap-4 items-start py-3 px-2 rounded-xl hover:bg-surface-container-highest/40 transition-all group relative"
+                    >
+                      {/* SHA badge */}
+                      <div className="w-10 h-10 rounded-lg bg-surface-container-highest shrink-0 flex items-center justify-center text-[9px] font-mono z-10 group-hover:bg-primary-container/20 group-hover:text-primary-fixed group-hover:shadow-[0_0_12px_rgba(0,245,255,0.25)] transition-all border border-outline-variant/10">
+                        {c.sha.slice(0, 7)}
+                      </div>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0 pt-1">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          {/* Category tag */}
+                          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${tag.color}`}>
+                            <span className="material-symbols-outlined text-[10px]">{tag.icon}</span>
+                            {tag.label}
+                          </span>
+                        </div>
+                        <p className="text-sm font-bold leading-snug group-hover:text-primary-fixed transition-colors line-clamp-2">
+                          {c.commit.message.split('\n')[0]}
+                        </p>
+                        {c.commit.message.includes('\n') && (
+                          <p className="text-[10px] text-on-surface-variant/60 mt-0.5 line-clamp-1">
+                            {c.commit.message.split('\n').slice(1).join(' ').trim()}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-4 h-4 rounded-full bg-surface-container-highest border border-outline-variant/20 overflow-hidden flex items-center justify-center">
+                              {c.author?.avatar_url ? (
+                                <img src={c.author.avatar_url} alt={c.commit.author.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="material-symbols-outlined text-[10px] text-on-surface-variant">person</span>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-on-surface-variant font-medium">{c.commit.author.name}</span>
+                          </div>
+                          <span className="text-[10px] text-on-surface-variant/40">•</span>
+                          <span className="text-[10px] text-on-surface-variant/60">
+                            {new Date(c.commit.author.date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                          </span>
+                          <span className="text-[10px] text-on-surface-variant/40">
+                            {new Date(c.commit.author.date).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Arrow */}
+                      <span className="material-symbols-outlined text-base text-on-surface-variant/0 group-hover:text-primary-fixed/60 transition-all shrink-0 mt-2">
+                        open_in_new
+                      </span>
+                    </a>
+                  );
+                }) : (
+                  <p className="text-[11px] text-on-surface-variant/40 text-center italic py-12">
+                    {isLoading ? "Loading commits..." : "Select a repository to view commit history."}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+
+      {/* ── Grid panels (pulse / conflicts / repositories) ── */}
+      {(view === "pulse" || view === "conflicts" || view === "repositories") && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Conflict Detection System */}
           {(view === "pulse" || view === "conflicts") && (
@@ -192,35 +312,17 @@ export default function Dashboard({ onAnalysisUpdate, view = "pulse", customRepo
             </div>
           )}
 
-          {/* Auto Documentation Panel / History */}
-          {(view === "pulse" || view === "history") && (
+          {/* Auto Documentation Panel (pulse only) */}
+          {view === "pulse" && (
             <div className="lg:col-span-4 glass-panel rounded-xl border border-outline-variant/20 flex flex-col overflow-hidden">
               <div className="p-5 border-b border-outline-variant/10 bg-white/5">
                 <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-secondary-fixed">auto_awesome</span>
-                  <h4 className="font-headline font-semibold text-xs uppercase tracking-widest">
-                    {view === "history" ? "Commit History" : "Auto-Documentation"}
-                  </h4>
+                  <h4 className="font-headline font-semibold text-xs uppercase tracking-widest">Auto-Documentation</h4>
                 </div>
               </div>
               <div className="p-5 flex-1 overflow-y-auto custom-scrollbar space-y-4">
-                {view === "history" ? (
-                  <div className="space-y-4">
-                    {analysis?.commits?.map((c: any, i: number) => (
-                      <div key={i} className="flex gap-3 items-start">
-                        <div className="w-8 h-8 rounded bg-surface-container-highest shrink-0 flex items-center justify-center text-[10px] font-mono">
-                          {c.sha.slice(0, 4)}
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold leading-tight">{c.commit.message}</p>
-                          <p className="text-[10px] text-on-surface-variant mt-1">
-                            {c.commit.author.name} • {new Date(c.commit.author.date).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : analysis?.documentation ? (
+                {analysis?.documentation ? (
                   <>
                     <div>
                       <p className="text-[10px] text-secondary font-bold uppercase tracking-tighter mb-2">Features</p>
@@ -251,11 +353,12 @@ export default function Dashboard({ onAnalysisUpdate, view = "pulse", customRepo
               </div>
               <div className="p-4">
                 <button className="w-full py-2 bg-secondary-container/20 text-secondary-fixed font-bold text-[10px] uppercase tracking-widest rounded hover:bg-secondary-container/30 transition-all active:scale-[0.98]">
-                  {view === "history" ? "View Full History" : "Export Release Notes"}
+                  Export Release Notes
                 </button>
               </div>
             </div>
           )}
+
 
           {/* Skill-Based Recommendations / Repositories */}
           {(view === "pulse" || view === "repositories") && (
@@ -314,7 +417,7 @@ export default function Dashboard({ onAnalysisUpdate, view = "pulse", customRepo
             </div>
           )}
         </div>
-      ) : null}
+      )}
     </div>
   );
 }

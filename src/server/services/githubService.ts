@@ -26,7 +26,7 @@ export class GitHubService {
   static async getCommits(token: string | undefined, owner: string, repo: string): Promise<GitHubCommit[]> {
     const response = await axios.get(`${this.BASE_URL}/repos/${owner}/${repo}/commits`, {
       headers: this.getHeaders(token),
-      params: { per_page: 50 },
+      params: { per_page: 100 },
     });
     return response.data;
   }

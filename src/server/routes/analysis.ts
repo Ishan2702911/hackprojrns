@@ -43,7 +43,7 @@ router.get("/:owner/:repo", async (req, res) => {
 
     res.json({ 
       prs: prsToAnalyze,
-      commits: commits.slice(0, 20),
+      commits,
       relations, 
       conflicts, 
       documentation,
