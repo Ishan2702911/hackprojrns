@@ -8,6 +8,7 @@ const navItems = [
   { icon: "alt_route", label: "PR Mapping", path: "/pr-mapping" },
   { icon: "warning", label: "Conflict Engine", path: "/conflicts" },
   { icon: "history", label: "History", path: "/history" },
+  { icon: "summarize", label: "Summaries", path: "/summaries" },
 ];
 
 const footerItems = [

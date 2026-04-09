@@ -7,13 +7,31 @@ import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import Dashboard from "./components/Dashboard";
 import OracleChat from "./components/OracleChat";
-import { AuthProvider } from "./hooks/useAuth";
+import Summaries from "./components/Summaries";
+import { AuthProvider, useAuth } from "./hooks/useAuth";
 import { useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+
+function SummariesRoute({ analysis, selectedRepo }: { analysis: any; selectedRepo: any }) {
+  const { isAuthenticated } = useAuth();
+  return (
+    <Summaries
+      selectedRepo={selectedRepo}
+      commits={analysis?.commits || []}
+      isAuthenticated={isAuthenticated}
+    />
+  );
+}
 
 export default function App() {
   const [analysis, setAnalysis] = useState<any>(null);
   const [customRepo, setCustomRepo] = useState<string>("");
+  const [selectedRepo, setSelectedRepo] = useState<any>(null);
+
+  const handleAnalysisUpdate = (data: any, repo?: any) => {
+    setAnalysis(data);
+    if (repo) setSelectedRepo(repo);
+  };
 
   return (
     <AuthProvider>
@@ -26,11 +44,12 @@ export default function App() {
             
             <Routes>
               <Route path="/" element={<Navigate to="/pulse" replace />} />
-              <Route path="/pulse" element={<Dashboard onAnalysisUpdate={setAnalysis} customRepo={customRepo} />} />
-              <Route path="/repositories" element={<Dashboard onAnalysisUpdate={setAnalysis} view="repositories" customRepo={customRepo} />} />
-              <Route path="/pr-mapping" element={<Dashboard onAnalysisUpdate={setAnalysis} view="pr-mapping" customRepo={customRepo} />} />
-              <Route path="/conflicts" element={<Dashboard onAnalysisUpdate={setAnalysis} view="conflicts" customRepo={customRepo} />} />
-              <Route path="/history" element={<Dashboard onAnalysisUpdate={setAnalysis} view="history" customRepo={customRepo} />} />
+              <Route path="/pulse" element={<Dashboard onAnalysisUpdate={(d, r) => handleAnalysisUpdate(d, r)} customRepo={customRepo} />} />
+              <Route path="/repositories" element={<Dashboard onAnalysisUpdate={(d, r) => handleAnalysisUpdate(d, r)} view="repositories" customRepo={customRepo} />} />
+              <Route path="/pr-mapping" element={<Dashboard onAnalysisUpdate={(d, r) => handleAnalysisUpdate(d, r)} view="pr-mapping" customRepo={customRepo} />} />
+              <Route path="/conflicts" element={<Dashboard onAnalysisUpdate={(d, r) => handleAnalysisUpdate(d, r)} view="conflicts" customRepo={customRepo} />} />
+              <Route path="/history" element={<Dashboard onAnalysisUpdate={(d, r) => handleAnalysisUpdate(d, r)} view="history" customRepo={customRepo} />} />
+              <Route path="/summaries" element={<SummariesRoute analysis={analysis} selectedRepo={selectedRepo} />} />
             </Routes>
             
             <OracleChat repoContext={analysis} />

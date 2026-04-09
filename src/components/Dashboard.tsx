@@ -4,7 +4,7 @@ import { cn } from "@/src/lib/utils";
 import { useAuth } from "@/src/hooks/useAuth";
 
 interface DashboardProps {
-  onAnalysisUpdate?: (analysis: any) => void;
+  onAnalysisUpdate?: (analysis: any, repo?: any) => void;
   view?: string;
   customRepo?: string;
 }
@@ -80,7 +80,7 @@ export default function Dashboard({ onAnalysisUpdate, view = "pulse", customRepo
       const res = await fetch(`/api/analysis/${repo.owner.login}/${repo.name}`);
       const data = await res.json();
       setAnalysis(data);
-      onAnalysisUpdate?.(data);
+      onAnalysisUpdate?.(data, repo);
     } catch (error) {
       console.error("Failed to fetch analysis:", error);
     } finally {

@@ -19,10 +19,12 @@ app.use(cookieParser());
 import authRouter from "./src/server/routes/auth.js";
 import reposRouter from "./src/server/routes/repos.js";
 import analysisRouter from "./src/server/routes/analysis.js";
+import summaryRouter from "./src/server/routes/summary.js";
 
 app.use("/api/auth", authRouter);
 app.use("/api/repos", reposRouter);
 app.use("/api/analysis", analysisRouter);
+app.use("/api/summary", summaryRouter);
 
 if (isProd) {
   const distPath = path.resolve(__dirname, "dist");
