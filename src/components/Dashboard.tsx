@@ -33,6 +33,9 @@ export default function Dashboard({ onAnalysisUpdate, view = "pulse", customRepo
   const [selectedRepo, setSelectedRepo] = useState<any>(null);
   const [analysis, setAnalysis] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [expandedConflict, setExpandedConflict] = useState<number | null>(null);
+  const [resolvingConflict, setResolvingConflict] = useState<number | null>(null);
+  const [conflictSolutions, setConflictSolutions] = useState<Record<number, string>>({});
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -138,6 +141,25 @@ export default function Dashboard({ onAnalysisUpdate, view = "pulse", customRepo
     win.document.close();
     win.focus();
     setTimeout(() => win.print(), 400);
+  };
+
+  const handleResolveConflict = async (c: any, index: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (conflictSolutions[index]) return;
+    setResolvingConflict(index);
+    try {
+      const res = await fetch("/api/resolve-conflict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repo: selectedRepo?.full_name, file: c.file, pr1: c.pr1, pr2: c.pr2 })
+      });
+      const data = await res.json();
+      setConflictSolutions(prev => ({ ...prev, [index]: data.solution || data.error }));
+    } catch (err) {
+      setConflictSolutions(prev => ({ ...prev, [index]: "Failed to generate solution. Check API keys." }));
+    } finally {
+      setResolvingConflict(null);
+    }
   };
 
   if (!isAuthenticated) {
@@ -339,27 +361,56 @@ export default function Dashboard({ onAnalysisUpdate, view = "pulse", customRepo
                   {analysis?.conflicts?.length || 0} Alerts
                 </span>
               </div>
-              <div className="p-2 space-y-2 flex-1 max-h-[300px] overflow-y-auto custom-scrollbar">
+              <div className="p-2 space-y-2 flex-1 max-h-[400px] overflow-y-auto custom-scrollbar">
                 {analysis?.conflicts?.length > 0 ? (
-                  analysis.conflicts.map((c: any, i: number) => (
-                    <div key={i} className="p-3 bg-surface-container-highest/30 rounded flex items-start gap-4 hover:bg-surface-container-highest/50 transition-colors cursor-pointer group">
-                      <span className="material-symbols-outlined text-on-surface-variant text-sm mt-1 group-hover:text-on-surface transition-colors">description</span>
-                      <div className="flex-1">
-                        <p className="text-xs font-mono text-on-surface">{c.file}</p>
-                        <p className="text-[10px] text-on-surface-variant mt-1 leading-relaxed">
-                          Conflict between PR #{c.pr1} and PR #{c.pr2}
-                        </p>
+                  analysis.conflicts.map((c: any, i: number) => {
+                    const isExpanded = expandedConflict === i;
+                    return (
+                      <div 
+                        key={i} 
+                        onClick={() => setExpandedConflict(isExpanded ? null : i)}
+                        className="p-3 bg-surface-container-highest/30 rounded flex flex-col gap-2 hover:bg-surface-container-highest/50 transition-colors cursor-pointer group"
+                      >
+                        <div className="flex items-start gap-4">
+                          <span className="material-symbols-outlined text-on-surface-variant text-sm mt-1 group-hover:text-on-surface transition-colors">
+                            {isExpanded ? "expand_less" : "description"}
+                          </span>
+                          <div className="flex-1">
+                            <p className="text-xs font-mono text-on-surface">{c.file}</p>
+                            <p className="text-[10px] text-on-surface-variant mt-1 leading-relaxed">
+                              Conflict between PR #{c.pr1} and PR #{c.pr2}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {isExpanded && (
+                          <div onClick={(e) => e.stopPropagation()} className="mt-2 pt-2 border-t border-outline-variant/10 pl-8">
+                            <p className="text-[10px] text-on-surface-variant mb-3 leading-relaxed">
+                              This file is modified by both Pull Request #{c.pr1} and Pull Request #{c.pr2}. Merging one may cause a severe merge conflict or logical overwrite for the other.
+                            </p>
+                            
+                            {conflictSolutions[i] ? (
+                              <div className="bg-primary-container/10 border border-primary-container/20 rounded p-3 mb-2">
+                                <p className="text-[10px] font-bold text-primary-fixed uppercase tracking-wider mb-1">AI Solution</p>
+                                <p className="text-[10px] text-on-surface leading-relaxed">{conflictSolutions[i]}</p>
+                              </div>
+                            ) : (
+                              <button 
+                                onClick={(e) => handleResolveConflict(c, i, e)}
+                                disabled={resolvingConflict === i}
+                                className="w-full py-1.5 border border-primary-container/50 bg-primary-container/10 text-primary-fixed text-[10px] font-bold uppercase tracking-widest rounded hover:bg-primary-container/20 transition-all active:scale-[0.98] disabled:opacity-50"
+                              >
+                                {resolvingConflict === i ? "Analyzing..." : "Resolve Conflict"}
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <p className="text-[10px] text-on-surface-variant/40 p-4 text-center italic">No active conflicts detected.</p>
                 )}
-              </div>
-              <div className="p-4 bg-surface-container-lowest/50">
-                <button className="w-full py-2 border border-error/30 text-error text-[10px] font-bold uppercase tracking-widest rounded hover:bg-error/10 transition-all active:scale-[0.98]">
-                  Resolve Dependencies
-                </button>
               </div>
             </div>
           )}

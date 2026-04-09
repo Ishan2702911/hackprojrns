@@ -1,5 +1,6 @@
 import { motion } from "motion/react";
 import { cn } from "@/src/lib/utils";
+import { useState } from "react";
 
 interface TimelineProps {
   prs: any[];
@@ -8,6 +9,7 @@ interface TimelineProps {
 }
 
 export default function Timeline({ prs = [], relations = [], conflicts = [] }: TimelineProps) {
+  const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const prNodes = prs.map(pr => {
     const hasConflict = conflicts.some(c => c.pr1 === pr.number || c.pr2 === pr.number);
     return {
@@ -70,11 +72,12 @@ export default function Timeline({ prs = [], relations = [], conflicts = [] }: T
           {prNodes.map((node, i) => (
             <div key={node.id} className="relative group">
               <motion.div
+                onClick={() => setSelectedNode(selectedNode === node.id ? null : node.id)}
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.5, delay: i * 0.1 }}
                 className={cn(
-                  "w-12 h-12 rounded-full flex items-center justify-center cursor-pointer transition-all group-hover:scale-110",
+                  "w-12 h-12 rounded-full flex items-center justify-center cursor-pointer transition-all group-hover:scale-110 relative z-30",
                   node.color === "primary" && "bg-primary-container/20 border-2 border-primary-container node-glow-primary",
                   node.color === "neutral" && "bg-surface-container-highest border-2 border-outline-variant",
                   node.color === "error" && "bg-error-container/30 border-2 border-error node-glow-error animate-pulse"
@@ -89,14 +92,22 @@ export default function Timeline({ prs = [], relations = [], conflicts = [] }: T
                 )}
               </motion.div>
               
-              <div className={cn(
-                "absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-center transition-opacity",
-                node.active || node.conflict ? "opacity-100" : "opacity-0 group-hover:opacity-100",
-                i % 2 === 0 ? "-bottom-12" : "-top-12"
-              )}>
-                <p className="text-[10px] font-mono text-on-surface-variant truncate max-w-[150px]">{node.label}</p>
+              <div 
+                className={cn(
+                  "absolute left-1/2 -translate-x-1/2 text-center transition-all",
+                  node.active || node.conflict || selectedNode === node.id ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+                  i % 2 === 0 ? "-bottom-14" : "-top-14",
+                  selectedNode === node.id ? "z-50 bg-surface-container-highest p-3 rounded-lg shadow-xl shadow-background border border-outline-variant/30 min-w-[220px]" : "z-20 whitespace-nowrap"
+                )}
+              >
+                <p className={cn(
+                  "text-[10px] font-mono",
+                  selectedNode === node.id ? "text-on-surface whitespace-normal leading-relaxed text-balance" : "text-on-surface-variant truncate max-w-[150px]"
+                )}>
+                  {node.label}
+                </p>
                 {node.status && (
-                  <p className={cn("text-[9px] font-bold uppercase tracking-widest", node.conflict ? "text-error" : "text-primary-fixed")}>
+                  <p className={cn("text-[9px] font-bold uppercase tracking-widest mt-1", node.conflict ? "text-error" : "text-primary-fixed")}>
                     {node.status}
                   </p>
                 )}

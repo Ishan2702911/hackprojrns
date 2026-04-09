@@ -20,11 +20,13 @@ import authRouter from "./src/server/routes/auth.js";
 import reposRouter from "./src/server/routes/repos.js";
 import analysisRouter from "./src/server/routes/analysis.js";
 import summaryRouter from "./src/server/routes/summary.js";
+import resolveConflictRouter from "./src/server/routes/resolve-conflict.js";
 
 app.use("/api/auth", authRouter);
 app.use("/api/repos", reposRouter);
 app.use("/api/analysis", analysisRouter);
 app.use("/api/summary", summaryRouter);
+app.use("/api/resolve-conflict", resolveConflictRouter);
 
 if (isProd) {
   const distPath = path.resolve(__dirname, "dist");
