@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
 import { cn } from "@/src/lib/utils";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 interface TimelineProps {
   prs: any[];
@@ -10,6 +10,23 @@ interface TimelineProps {
 
 export default function Timeline({ prs = [], relations = [], conflicts = [] }: TimelineProps) {
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [isLive, setIsLive] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const handleLiveView = () => {
+    setIsLive(true);
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({
+        left: scrollRef.current.scrollWidth,
+        behavior: 'smooth'
+      });
+    }
+    setTimeout(() => setIsLive(false), 2000);
+  };
+
+  const nodeDistance = isZoomed ? 360 : 240;
+  const containerWidth = Math.max(1600, prs.length * nodeDistance + 240);
   const prNodes = prs.map(pr => {
     const hasConflict = conflicts.some(c => c.pr1 === pr.number || c.pr2 === pr.number);
     return {
@@ -30,21 +47,35 @@ export default function Timeline({ prs = [], relations = [], conflicts = [] }: T
           <h3 className="font-headline font-semibold uppercase tracking-widest text-sm">PR Mapping Dependency Timeline</h3>
         </div>
         <div className="flex gap-2">
-          <button className="px-3 py-1 text-xs rounded bg-surface-container hover:bg-surface-container-high transition-colors text-on-surface-variant">Zoom In</button>
-          <button className="px-3 py-1 text-xs rounded bg-surface-container hover:bg-surface-container-high transition-colors text-on-surface-variant">Live View</button>
+          <button 
+            onClick={() => setIsZoomed(!isZoomed)}
+            className={cn("px-3 py-1 text-xs rounded transition-colors", isZoomed ? "bg-primary-container/20 text-primary-fixed border border-primary-container/30" : "bg-surface-container hover:bg-surface-container-high text-on-surface-variant")}
+          >
+            {isZoomed ? "Zoom Out" : "Zoom In"}
+          </button>
+          <button 
+            onClick={handleLiveView}
+            className={cn("px-3 py-1 text-xs rounded transition-colors flex items-center gap-1", isLive ? "bg-secondary-container/20 text-secondary-fixed border border-secondary-container/30" : "bg-surface-container hover:bg-surface-container-high text-on-surface-variant")}
+          >
+            {isLive && <span className="w-1.5 h-1.5 rounded-full bg-secondary-fixed animate-pulse" />}
+            Live View
+          </button>
         </div>
       </div>
 
-      <div className="h-80 relative overflow-x-auto overflow-y-hidden custom-scrollbar bg-surface-container-lowest">
+      <div ref={scrollRef} className="h-80 relative overflow-x-auto overflow-y-hidden custom-scrollbar bg-surface-container-lowest scroll-smooth transition-all duration-500">
         {/* SVG for Dependency Lines */}
-        <svg className="absolute inset-0 w-[1600px] h-full pointer-events-none">
+        <svg 
+          className="absolute inset-0 h-full pointer-events-none transition-all duration-500"
+          style={{ width: containerWidth }}
+        >
           {relations.map((rel, idx) => {
             const i1 = prs.findIndex(p => p.number === rel.pr1);
             const i2 = prs.findIndex(p => p.number === rel.pr2);
             if (i1 === -1 || i2 === -1) return null;
 
-            const x1 = 120 + i1 * 240;
-            const x2 = 120 + i2 * 240;
+            const x1 = 120 + i1 * nodeDistance;
+            const x2 = 120 + i2 * nodeDistance;
             const y1 = 160;
             const y2 = 160;
 
@@ -68,9 +99,13 @@ export default function Timeline({ prs = [], relations = [], conflicts = [] }: T
           })}
         </svg>
 
-        <div className="flex items-center h-full w-[1600px] px-20 space-x-48">
+        <div className="absolute inset-0 h-full transition-all duration-500" style={{ width: containerWidth }}>
           {prNodes.map((node, i) => (
-            <div key={node.id} className="relative group">
+            <div 
+              key={node.id} 
+              className="absolute top-1/2 -translate-y-1/2 group transition-all duration-500"
+              style={{ left: 120 + i * nodeDistance - 24 }} // 24 is half of the w-12 node
+            >
               <motion.div
                 onClick={() => setSelectedNode(selectedNode === node.id ? null : node.id)}
                 initial={{ scale: 0, opacity: 0 }}
@@ -80,7 +115,8 @@ export default function Timeline({ prs = [], relations = [], conflicts = [] }: T
                   "w-12 h-12 rounded-full flex items-center justify-center cursor-pointer transition-all group-hover:scale-110 relative z-30",
                   node.color === "primary" && "bg-primary-container/20 border-2 border-primary-container node-glow-primary",
                   node.color === "neutral" && "bg-surface-container-highest border-2 border-outline-variant",
-                  node.color === "error" && "bg-error-container/30 border-2 border-error node-glow-error animate-pulse"
+                  node.color === "error" && "bg-error-container/30 border-2 border-error node-glow-error animate-pulse",
+                  isLive && node.active && "shadow-[0_0_15px_rgba(0,245,255,0.8)]"
                 )}
               >
                 {node.conflict ? (
@@ -101,7 +137,7 @@ export default function Timeline({ prs = [], relations = [], conflicts = [] }: T
                 )}
               >
                 <p className={cn(
-                  "text-[10px] font-mono",
+                  "text-[10px] font-mono transition-all",
                   selectedNode === node.id ? "text-on-surface whitespace-normal leading-relaxed text-balance" : "text-on-surface-variant truncate max-w-[150px]"
                 )}>
                   {node.label}
