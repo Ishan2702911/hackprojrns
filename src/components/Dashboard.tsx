@@ -449,10 +449,16 @@ export default function Dashboard({ onAnalysisUpdate, view = "pulse", customRepo
                   </div>
                 ) : analysis?.recommendations?.length > 0 ? (
                   analysis.recommendations.map((rec: any, i: number) => (
-                    <div key={i} className={cn(
-                      "bg-surface-container-lowest p-4 rounded-lg border-l-2 relative overflow-hidden group cursor-pointer transition-all hover:translate-x-1",
-                      rec.difficulty === "Moderate" ? "border-primary-container" : "border-secondary"
-                    )}>
+                    <a
+                      key={i}
+                      href={`https://github.com/${selectedRepo?.owner?.login}/${selectedRepo?.name}/pull/${rec.pr.number}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={cn(
+                        "block bg-surface-container-lowest p-4 rounded-lg border-l-2 relative overflow-hidden group cursor-pointer transition-all hover:translate-x-1",
+                        rec.difficulty === "Moderate" ? "border-primary-container" : "border-secondary"
+                      )}
+                    >
                       <div className="flex justify-between items-start mb-2">
                         <span className="text-[10px] font-mono uppercase text-primary-fixed">PR #{rec.pr.number}</span>
                         <span className={cn(
@@ -462,10 +468,10 @@ export default function Dashboard({ onAnalysisUpdate, view = "pulse", customRepo
                       </div>
                       <h5 className="text-xs font-bold mb-1 leading-tight">{rec.pr.title}</h5>
                       <p className="text-[10px] text-on-surface-variant mb-3">{rec.reason}</p>
-                      <button className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all group-hover:gap-3 text-primary-fixed">
+                      <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all group-hover:gap-3 text-primary-fixed">
                         Start Fixing <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                      </button>
-                    </div>
+                      </div>
+                    </a>
                   ))
                 ) : (
                   <p className="text-[10px] text-on-surface-variant/40 text-center italic">No recommendations available.</p>
